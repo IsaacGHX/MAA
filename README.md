@@ -4,7 +4,7 @@
     <span style="color:#1E90FF;">A</span>gent 
     <span style="color:#8B0000;">A</span>dversarial
     <span style="color:#FF8C00;">T</span>ime 
-    <span style="color:#FFD700; background-color:black;">S</span>eries
+    <span style="color:#FFD700;">S</span>eries
     <span style="color:#800080;">F</span>orecasting
     (MAA-TSF)
 </p>
