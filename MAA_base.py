@@ -5,8 +5,9 @@ import os
 
 class MAABase(ABC):
     """
-    MAA 框架的虚基类，定义核心方法接口。
-    所有子类必须实现以下方法。
+    Abstract base class for the MAA framework,
+    defining core method interfaces.
+    All subclasses must implement the following methods.
     """
 
     def __init__(self, N_pairs, batch_size, num_epochs,
@@ -21,16 +22,16 @@ class MAABase(ABC):
                  seed=None,
                  ckpt_path="auto",):
         """
-        初始化必备的超参数。
+        Initialize necessary hyperparameters.
 
-        :param N_pairs: 生成器or对抗器的个数
-        :param batch_size: 小批次处理
-        :param num_epochs: 预定训练轮数
-        :param initial_learning_rate: 初始学习率
-        :param generators: 建议是一个iterable object，包括了表示具有不同特征的生成器
-        :param discriminators: 建议是一个iterable object，可以是相同的判别器
-        :param ckpt_path: 各模型检查点
-        :param output_path: 可视化、损失函数的log等输出路径
+        :param N_pairs: Number of generators or discriminators
+        :param batch_size: Mini-batch size
+        :param num_epochs: Scheduled training epochs
+        :param initial_learning_rate: Initial learning rate
+        :param generators: Recommended to be an iterable object, including generators with different features
+        :param discriminators: Recommended to be an iterable object, can be the same discriminator
+        :param ckpt_path: Checkpoints for each model
+        :param output_path: Output path for visualization, loss function logs, etc.
         """
 
         self.N = N_pairs
@@ -49,7 +50,7 @@ class MAABase(ABC):
         self.device = device
         self.precise = precise
 
-        self.set_seed(self.seed)  # 初始化随机种子
+        self.set_seed(self.seed)  # Initialize random seed
         self.device = setup_device(device)
         print("Running Device:", self.device)
 
@@ -62,11 +63,6 @@ class MAABase(ABC):
             print("Checkpoint directory created! ")
 
     def set_seed(self, seed):
-        """
-        设置随机种子以确保实验的可重复性。
-
-        :param seed: 随机种子
-        """
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -75,45 +71,45 @@ class MAABase(ABC):
 
     @abstractmethod
     def process_data(self):
-        """数据预处理，包括读取、清洗、划分等"""
+        """Data preprocessing, including reading, cleaning, splitting, etc."""
         pass
 
     @abstractmethod
     def init_model(self):
-        """模型结构初始化"""
+        """Model structure initialization"""
         pass
 
     @abstractmethod
     def init_dataloader(self):
-        """初始化用于训练与评估的数据加载器"""
+        """Initialize data loaders for training and evaluation"""
         pass
 
     @abstractmethod
     def init_hyperparameters(self):
-        """初始化训练所需的超参数"""
+        """Initialize hyperparameters required for training"""
         pass
 
     @abstractmethod
     def train(self):
-        """执行训练过程"""
+        """Execute the training process"""
         pass
 
     @abstractmethod
     def save_models(self):
-        """执行训练过程"""
+        """Execute the training process"""
         pass
 
     @abstractmethod
     def distill(self):
-        """执行知识蒸馏过程"""
+        """Execute the knowledge distillation process"""
         pass
 
     @abstractmethod
     def visualize_and_evaluate(self):
-        """评估模型性能并可视化结果"""
+        """Evaluate model performance and visualize results"""
         pass
 
     @abstractmethod
     def init_history(self):
-        """初始化训练过程中的指标记录结构"""
+        """Initialize the metric recording structure during training"""
         pass

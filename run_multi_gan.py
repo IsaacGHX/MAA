@@ -7,7 +7,7 @@ from utils.logger import setup_experiment_logging
 import logging
 
 def run_experiments(args):
-    # 创建保存结果的CSV文件
+    # create result csv
     results_file = os.path.join(args.output_dir, "gca_GT_NPDC_market.csv")
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -27,7 +27,6 @@ def run_experiments(args):
 
     for target in args.target_columns:
         # for target,feature in zip(target_columns,feature_columns):
-        # 运行实验，获取结果
         target_feature_columns = args.feature_columns
         # target_feature_columns = feature_columns
         # target_feature_columns=target_feature_columns.extend(target)
@@ -51,7 +50,6 @@ def run_experiments(args):
             results = gca.pred()
 
 
-        # 将结果保存到CSV
         result_row = {
             "feature_columns": args.feature_columns,
             "target_columns": target,
@@ -79,18 +77,17 @@ if __name__ == "__main__":
     print("** Any other models please refer to add you model name to models.__init__ and import your costumed ones.")
     print("===============================================\n")
 
-    # 使用argparse解析命令行参数
     parser = argparse.ArgumentParser(description="Run experiments for triple GAN model")
     parser.add_argument('--notes', type=str, required=False, help="Leave your setting in this note",
-                        default="单个GAN的Transformer试试看")
+                        default="Single test")
     parser.add_argument('--data_path', type=str, required=False, help="Path to the input data file",
-                        default=r"D:\Desktop\SHU\Intern\同梁AI量化\papers\database\kline_processed_data/processed_美元指数_day.csv")
+                        default=r".\database\kline_processed_data/processed_USindex_day.csv")
     parser.add_argument('--output_dir', type=str, required=False, help="Directory to save the output",
-                        default=r"D:\Desktop\SHU\Intern\同梁AI量化\papers\all_logs\main/out_put/multi")
+                        default=r"./out_put/multi")
     parser.add_argument('--ckpt_dir', type=str, required=False, help="Directory to save the checkpoints",
                         default="ckpt")
     parser.add_argument('--log_diff', type=bool,  help="whether to use log diff to rescale the data", default=False)
-    parser.add_argument('--feature_columns', nargs='+', type=int,  help="features choosed to be used as input", default=[2,19,2,19,2,19])
+    parser.add_argument('--feature_columns', nargs='+', type=int,  help="features choosed to be used as input, e.g. [start column for G1, end column for G1, ...]", default=[2,19,2,19,2,19])
     # parser.add_argument('--feature_columns', type=list, help="features choosed to be used as input", default=[])
     # parser.add_argument('--feature_columns', type=list, help="features choosed to be used as input", default=list(range(2,24)))
     parser.add_argument('--target_columns', type=list, help="target to be predicted", default=[list(range(1, 2))])
@@ -106,10 +103,10 @@ if __name__ == "__main__":
                         # default=["lstm"])
     parser.add_argument('--discriminators', "-discs", type=list, help="names of discriminators", default=None)
     parser.add_argument('--distill_epochs', type=int, help="Epochs to do distillation", default=1)
-    parser.add_argument('--cross_finetune_epochs', type=int, help="Epochs to do distillation", default=5)
+    parser.add_argument('--cross_finetune_epochs', type=int, help="Epochs to do elite guide finetune", default=5)
     parser.add_argument('--device', type=list, help="Device sets", default=[0])
 
-    parser.add_argument('--num_epochs', type=int, help="epoch", default=1)
+    parser.add_argument('--num_epochs', type=int, help="epoch", default=10000)
     parser.add_argument('--lr', type=int, help="initial learning rate", default=2e-5)
     parser.add_argument('--batch_size', type=int, help="Batch size for training", default=64)
     parser.add_argument('--train_split', type=float, help="Train-test split ratio", default=0.7)
@@ -117,9 +114,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--amp_dtype",
         type=str,
-        default="none",  # 可选：'float16', 'bfloat16', 'none'
+        default="none",  # float16', 'bfloat16', 'none'
         choices=["float16", "bfloat16", "none"],
-        help="自动混合精度类型（AMP）：float16, bfloat16, 或 none（禁用）"
+        help="AMP: float16, bfloat16, or none"
     )
     parser.add_argument('--mode', type=str, choices=["pred", "train"],
                         help="If train, it will also pred, while it predicts, it will laod the model checkpoint saved before.",
@@ -133,5 +130,4 @@ if __name__ == "__main__":
         print(f"{arg}: {value}")
     print("===============================================")
 
-    # 调用run_experiments函数
     run_experiments(args)

@@ -7,22 +7,22 @@ import glob
 
 def plot_true_pred_density(df, output_dir, filename, alpha=0.5, no_grid=False):
     """
-    为每个 CSV 文件绘制真实值和预测值的密度估计图
+    Plot the density estimate for true and predicted values for each CSV file.
     Args:
-        df (pd.DataFrame): 包含 'true' 和 'pred' 列的 DataFrame
-        output_dir (str): 保存图形的目录
-        filename (str): 原始 CSV 文件名（不含扩展名）
-        alpha (float): 面积图的透明度
-        no_grid (bool): 是否取消网格线
+        df (pd.DataFrame): DataFrame containing 'true' and 'pred' columns.
+        output_dir (str): Directory to save the plots.
+        filename (str): Original CSV filename (without extension).
+        alpha (float): Transparency of the filled area.
+        no_grid (bool): Whether to remove grid lines.
     """
     plt.rcParams.update({'font.size': 12})
     plt.figure(figsize=(10, 6))
 
-    # 绘制真实值和预测值的 KDE 面积图
+    # Plot KDE area plots for true and predicted values
     sns.kdeplot(df['true'].dropna(), label='True', color='orange',
-                linewidth=0.8, alpha=alpha, fill=True)  # 更改 linewidth
+                linewidth=0.8, alpha=alpha, fill=True)  # Change linewidth
     sns.kdeplot(df['pred'].dropna(), label='Pred', color='blue',
-                linewidth=0.8, alpha=alpha, fill=True)  # 更改 linewidth
+                linewidth=0.8, alpha=alpha, fill=True)  # Change linewidth
 
     # plt.title(f'Density: True vs Pred ({filename})', fontsize=16)
     ax = plt.gca()
@@ -40,15 +40,15 @@ def plot_true_pred_density(df, output_dir, filename, alpha=0.5, no_grid=False):
     print(f"Saved: {out_path}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='为每个 CSV 文件绘制真实值和预测值的密度估计图')
+    parser = argparse.ArgumentParser(description='Plot density estimates of true and predicted values for each CSV file.')
     parser.add_argument('--input_dir', type=str, default='true2pred',
-                        help='包含 CSV 文件的目录')
+                        help='Directory containing CSV files.')
     parser.add_argument('--output_dir', type=str, default='outputs_vis',
-                        help='保存图形的目录')
+                        help='Directory to save the plots.')
     parser.add_argument('--alpha', type=float, default=0.4,
-                        help='面积图的透明度')
-    parser.add_argument('--no_grid', default=True,
-                        help='添加该参数则取消网格线')
+                        help='Transparency of the filled area.')
+    parser.add_argument('--no_grid', action='store_true', default=True,
+                        help='Add this parameter to remove grid lines.') # Use action='store_true' for flags
 
     args = parser.parse_args()
 
@@ -56,97 +56,81 @@ if __name__ == "__main__":
 
     csv_paths = glob.glob(os.path.join(args.input_dir, '*.csv'))
     if not csv_paths:
-        print(f"❌ 未在目录 {args.input_dir} 中找到 CSV 文件。")
+        print(f"No CSV files found in directory {args.input_dir}.")
         exit(1)
 
-    # for path in csv_paths:
-    #     filename = os.path.splitext(os.path.basename(path))[0]
-    #     try:
-    #         df = pd.read_csv(path)
-    #     except Exception as e:
-    #         print(f"❌ 无法读取文件 {path}: {e}")
-    #         continue
-    #
-    #     if 'true' not in df.columns or 'pred' not in df.columns:
-    #         print(f"⚠️ 文件 {path} 中缺少 'true' 或 'pred' 列，跳过。")
-    #         continue
-    #
-    #     plot_true_pred_density(df, args.output_dir, filename,
-    #                            alpha=args.alpha, no_grid=args.no_grid)
-    # --- 修改开始 ---
+    # --- Start of modification ---
 
     plt.rcParams.update({'font.size': 12})
-    plt.figure(figsize=(10, 6))  # 在循环外创建一次图形
+    plt.figure(figsize=(10, 6))  # Create one figure outside the loop
 
     all_true_series = []
     pred_series_list = []
     pred_labels = []
 
-    # 第一次循环：读取所有文件，收集数据
-    print("正在读取并收集数据...")
+    # First loop: Read all files, collect data
+    print("Reading and collecting data...")
     for path in csv_paths:
         filename = os.path.splitext(os.path.basename(path))[0]
         try:
             df = pd.read_csv(path)
         except Exception as e:
-            print(f"❌ 无法读取文件 {path}: {e}")
+            print(f"Could not read file {path}: {e}")
             continue
 
         if 'true' not in df.columns or 'pred' not in df.columns:
-            print(f"⚠️ 文件 {path} 中缺少 'true' 或 'pred' 列,跳过。")
+            print(f"File {path} is missing 'true' or 'pred' columns, skipping.")
             continue
 
-        # 收集真实值和预测值数据
+        # Collect true and predicted value data
         all_true_series.append(df['true'].dropna())
         pred_series_list.append(df['pred'].dropna())
-        pred_labels.append(filename)  # 使用文件名作为预测分布的标签
+        pred_labels.append(filename)  # Use filename as the label for the prediction distribution
 
     if not all_true_series:
-        print("❌ 未在任何文件中找到有效数据。")
-        plt.close()  # 关闭之前创建的空 figure
+        print("No valid data found in any file.")
+        plt.close()  # Close the empty figure created earlier
         exit(1)
 
-    # 合并所有真实值数据并绘制其总体的密度分布
+    # Combine all true value data and plot their overall density distribution
     combined_true = pd.concat(all_true_series).dropna()
     if not combined_true.empty:
-        # 使用你提到的更好看的样式：细边界线 (linewidth=1.5)，半透明填充 (alpha=args.alpha)
+        # Use the nicer style you mentioned: thin border (linewidth=1.5), semi-transparent fill (alpha=args.alpha)
         sns.kdeplot(combined_true, label='True (Combined)', color='orange',
                     linewidth=1.5, alpha=args.alpha, fill=True)
     else:
-        print("⚠️ 未找到真实的有效数据，跳过绘制 True 分布。")
+        print("No valid true data found, skipping plotting True distribution.")
 
-    # 绘制每个文件的预测值密度分布
-    print("正在绘制所有预测分布...")
-    # seaborn 会自动为不同的曲线选择颜色
-    # 如果你想控制颜色，可以使用 seaborn.color_palette 或手动指定
+    # Plot the predicted value density distribution for each file
+    print("Plotting all prediction distributions...")
+    # Seaborn automatically chooses colors for different curves
+    # If you want to control colors, you can use seaborn.color_palette or specify manually
     for pred_series, label in zip(pred_series_list, pred_labels):
         if not pred_series.empty:
-            # 同样使用细边界线和半透明填充
+            # Also use thin border and semi-transparent fill
             sns.kdeplot(pred_series, label=f'Pred ({label})',
-                        linewidth=1.5, alpha=args.alpha, fill=True)  # 让 seaborn 自动选择颜色
+                        linewidth=1.5, alpha=args.alpha, fill=True)  # Let seaborn automatically choose colors
         else:
-            print(f"⚠️ 文件 {label} 中未找到预测的有效数据，跳过绘制。")
+            print(f"No valid predicted data found in file {label}, skipping plotting.")
 
-    # --- 完成绘图设置 ---
+    # --- Finish plotting setup ---
     ax = plt.gca()
-    ax.set(xlabel='Value', ylabel='Density')  # 添加轴标签
-    # 可以选择添加一个总的标题
+    ax.set(xlabel='Value', ylabel='Density')  # Add axis labels
+    # Optionally add a main title
     plt.title('Density Distribution: Combined True vs All Predictions', fontsize=16)
 
-    plt.legend()  # 添加图例，显示每个预测对应的文件名
+    plt.legend()  # Add legend, showing the filename for each prediction
     if not args.no_grid:
-        plt.grid(True, linestyle='--', alpha=0.6)  # 可以让网格线更柔和
+        plt.grid(True, linestyle='--', alpha=0.6)  # Can make grid lines softer
 
     plt.tight_layout()
 
-    # 在循环外保存一次图形
+    # Save the plot once outside the loop
     out_path = os.path.join(args.output_dir, 'all_predictions_combined_density.png')
     try:
         plt.savefig(out_path)
         print(f"Saved combined plot: {out_path}")
     except Exception as e:
-        print(f"❌ 无法保存图形 {out_path}: {e}")
+        print(f"Could not save plot {out_path}: {e}")
 
-    plt.close()  # 关闭图形
-
-    # --- 修改结束 ---
+    plt.close()  # Close the figure

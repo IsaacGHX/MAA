@@ -1,20 +1,30 @@
-# GCA_lite
-A lite version of GCA base and everything almost encapsulated into classes
+# MAA
+<p>Code base of 
+    <span style="color:#2E8B57;">M</span>ulti- 
+    <span style="color:#1E90FF;">A</span>gent 
+    <span style="color:#8B0000;">A</span>dversarial
+    <span style="color:#FF8C00;">T</span>ime 
+    <span style="color:#FFD700; background-color:black;">S</span>eries
+    <span style="color:#800080;">F</span>orecasting
+    (MAA-TSF)
+</p>
 
 ## A biref intro of GCA:
 
 A class inherit structure:
 
 ```
-GCAbase
+MAAbase
  | 
- | -- GCA time series
- | -- GCA image generation 
- | -- ... 
+ | -- MAA time series
+ | -- MAA {image} generation 
+ | -- ... {more other generation tasks}
 ```
 
 ## Overall paradigm
+![MAA-TSF.svg](MAA-TSF.svg)
 
+## Brief Intro
 ### Initialize models: 
 - N generators, e.g. [GRU LSTM, Transformer]  # 3 generator models
 - N discriminators, e.g. [CNND1, CNND2, CNND3]  # 3 discriminator models
@@ -49,37 +59,5 @@ FOR e in EPOCHS:
         break
 ```
 
+## 
 
-
-
-# Today's Tasks(please omit)
-
-## Interface Design & Optimization
-- [ ] Discuss performance issues (point 1) with CC and propose solutions
-- [ ] Add train/predict mode switching functionality (point 6)
-- [x] Implement model weight saving capability (related to point 6)
-- [x] Design model library display to show only model names (point 3)
-
-## Model Training Improvements
-- [x] Evaluate hyperparameters currently available (window size, batch size, learning rate, etc.)
-- [ ] Consider adding automatic parameter suggestion (optimal epochs)
-- [ ] Review loss functions and algorithm implementations for performance improvement
-
-## Documentation & Specifications
-- [x] Document supported data types (time-series with any sequential period)
-- [ ] Clarify prediction cycle behavior in documentation (single vs multiple periods)
-- [x] Update documentation for model import process (Python files in model directory)
-
-## Model Library Management
-- [x] Implement model search functionality for user-added models (point 4)
-  - [x] Continue expanding built-in model library (point 5) 
-  - so far as we set an easy init
-
-
-## Evaluation Metrics
-- [?] NEED CC
-- [x] Verify all evaluation charts are being generated properly:
-  - [x] Price fitting curves (train/test sets)
-  - [x] MSE loss curves
-  - [x] Cross-adversarial loss curves (N^2)
-  - [x] Discriminator loss curves

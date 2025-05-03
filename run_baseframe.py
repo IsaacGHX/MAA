@@ -8,7 +8,6 @@ import models
 from utils.logger import setup_experiment_logging
 
 def run_experiments(args):
-    # 创建保存结果的CSV文件
     results_file = os.path.join(args.output_dir, "gca_GT_NPDC_market.csv")
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -28,7 +27,6 @@ def run_experiments(args):
 
     for target in args.target_columns:
         # for target,feature in zip(target_columns,feature_columns):
-        # 运行实验，获取结果
         target_feature_columns = args.feature_columns
         # target_feature_columns = feature_columns
         # target_feature_columns=target_feature_columns.extend(target)
@@ -49,8 +47,6 @@ def run_experiments(args):
         elif args.mode == "pred":
             results = gca.pred()
 
-
-        # 将结果保存到CSV
         result_row = {
             "feature_columns": args.feature_columns,
             "target_columns": target,
@@ -78,14 +74,13 @@ if __name__ == "__main__":
     print("** Any other models please refer to add you model name to models.__init__ and import your costumed ones.")
     print("===============================================\n")
 
-    # 使用argparse解析命令行参数
     parser = argparse.ArgumentParser(description="Run experiments for triple GAN model")
     parser.add_argument('--notes', type=str, required=False, help="Leave your setting in this note",
-                        default="回测300股指自回归")
+                        default="")
     parser.add_argument('--data_path', type=str, required=False, help="Path to the input data file",
-                        default="database/processed_300股指_day.csv")
+                        default="database/processed_PTA_day.csv")
     parser.add_argument('--output_dir', type=str, required=False, help="Directory to save the output",
-                        default=r"D:\Desktop\SHU\Intern\同梁AI量化\papers\all_logs\main/out_put/multi")
+                        default=r"..\main/out_put/multi")
     parser.add_argument('--ckpt_dir', type=str, required=False, help="Directory to save the checkpoints",
                         default="ckpt")
     parser.add_argument('--feature_columns', type=list, help="Window size for first dimension", default=list(range(2,19)))
@@ -114,9 +109,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--amp_dtype",
         type=str,
-        default="none",  # 可选：'float16', 'bfloat16', 'none'
+        default="none",  # 'float16', 'bfloat16', 'none'
         choices=["float16", "bfloat16", "none"],
-        help="自动混合精度类型（AMP）：float16, bfloat16, 或 none（禁用）"
+        help="AMP：float16, bfloat16, or none"
     )
     parser.add_argument('--mode', type=str, choices=["pred", "train"],
                         help="If train, it will also pred, while it predicts, it will laod the model checkpoint saved before.",
@@ -130,5 +125,4 @@ if __name__ == "__main__":
         print(f"{arg}: {value}")
     print("===============================================")
 
-    # 调用run_experiments函数
     run_experiments(args)

@@ -17,19 +17,15 @@ def train_baseframe(generator, dataloader,
     
     g_learning_rate = 2e-5
 
-    # 二元交叉熵【损失函数，可能会有问题
     # criterion = nn.BCELoss()
 
     optimizers_G = torch.optim.AdamW(generator.parameters(), lr=g_learning_rate, betas=(0.9, 0.999))
                     
-    # 为每个优化器设置 ReduceLROnPlateau 调度器
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizers_G, mode='min', factor=0.1, patience=16, min_lr=1e-7)
                   
     best_epoch = -1
 
-    # 定义生成历史记录的关键字
     """
-    以三个为例，keys长得是这样得的：
     ['G1', 'G2', 'G3', 
     'D1', 'D2', 'D3', 
     'MSE_G1', 'MSE_G2', 'MSE_G3', 
@@ -47,7 +43,6 @@ def train_baseframe(generator, dataloader,
     keys.extend(MSE_g_keys)
     keys.extend(val_loss_keys)
 
-    # 创建包含每个值为np.zeros(num_epochs)的字典
     # hists_dict = {key: np.zeros(num_epochs) for key in keys}
 
     # best_mse = float('inf')

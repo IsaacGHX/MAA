@@ -1,4 +1,4 @@
-from MAA_base import GCABase
+from MAA_base import MAABase
 import torch
 import numpy as np
 from functools import wraps
@@ -16,16 +16,14 @@ from utils.evaluate_visualization import evaluate_best_models
 
 
 def log_execution_time(func):
-    """装饰器：记录函数的运行时间，并动态获取函数名"""
 
-    @wraps(func)  # 保留原函数的元信息（如 __name__）
+    @wraps(func)
     def wrapper(*args, **kwargs):
-        start_time = time.time()  # 记录开始时间
-        result = func(*args, **kwargs)  # 执行目标函数
-        end_time = time.time()  # 记录结束时间
-        elapsed_time = end_time - start_time  # 计算耗时
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
 
-        # 动态获取函数名（支持类方法和普通函数）
         func_name = func.__name__
         print(f"GCA_time_series - '{func_name}' elapse time: {elapsed_time:.4f} sec")
         return result
@@ -34,20 +32,8 @@ def log_execution_time(func):
 
 
 def generate_labels(y):
-    """
-    根据每个时间步 y 是否比前一时刻更高，生成三分类标签：
-      - 2: 当前值 > 前一时刻（上升）
-      - 0: 当前值 < 前一时刻（下降）
-      - 1: 当前值 == 前一时刻（平稳）
-    对于第一个时间步，默认赋值为1（平稳）。
-
-    参数：
-        y: 数组，形状为 (样本数, ) 或 (样本数, 1)
-    返回：
-        labels: 生成的标签数组，长度与 y 相同
-    """
-    y = np.array(y).flatten()  # 转成一维数组
-    labels = [0]  # 对于第一个样本，默认平稳
+    y = np.array(y).flatten()
+    labels = [0]
     for i in range(1, len(y)):
         if y[i] > y[i - 1]:
             labels.append(2)
@@ -58,7 +44,7 @@ def generate_labels(y):
     return np.array(labels)
 
 
-class base_time_series(GCABase):
+class base_time_series(MAABase):
     def __init__(self, args, N_pairs: int, batch_size: int, num_epochs: int,
                  generators_names: List, discriminators_names: Optional[List],
                  ckpt_dir: str, output_dir: str,
@@ -73,19 +59,7 @@ class base_time_series(GCABase):
                  ckpt_path: str = None,
                  gan_weights=None,
                  ):
-        """
-        初始化必备的超参数。
 
-        :param N_pairs: 生成器or对抗器的个数
-        :param batch_size: 小批次处理
-        :param num_epochs: 预定训练轮数
-        :param initial_learning_rate: 初始学习率
-        :param generators_names: list object，包括了表示具有不同特征的生成器的名称
-        :param discriminators_names: list object，包括了表示具有不同判别器的名称，如果没有就不写默认一致
-        :param ckpt_dir: 各模型检查点保存目录
-        :param output_path: 可视化、损失函数的log等输出目录
-        :param ckpt_path: 预测时保存的检查点
-        """
         super().__init__(N_pairs, batch_size, num_epochs,
                          generators_names, discriminators_names,
                          ckpt_dir, output_dir,
@@ -95,15 +69,13 @@ class base_time_series(GCABase):
                          do_distill_epochs, cross_finetune_epochs,
                          device,
                          seed,
-                         ckpt_path)  # 调用父类初始化
+                         ckpt_path)
 
         self.args = args
         self.window_sizes = window_sizes
-        # 初始化空字典
         self.generator_dict = {}
         self.discriminator_dict = {"default": models.Discriminator3}
 
-        # 遍历 model 模块下的所有属性
         for name in dir(models):
             obj = getattr(models, name)
             if isinstance(obj, type) and issubclass(obj, torch.nn.Module):
@@ -162,9 +134,7 @@ class base_time_series(GCABase):
         self.train_y = self.y_scaler.fit_transform(train_y)
         self.test_y = self.y_scaler.transform(test_y)
 
-        # 生成训练集的分类标签（直接在 GPU 上生成）
         self.train_labels = generate_labels(self.train_y)
-        # 生成测试集的分类标签
         self.test_labels = generate_labels(self.test_y)
         print(self.train_y[:5])
         print(self.train_labels[:5])
@@ -194,10 +164,8 @@ class base_time_series(GCABase):
 
     @log_execution_time
     def init_dataloader(self):
-        """初始化用于训练与评估的数据加载器"""
 
         # Sliding Window Processing
-        # 分别生成不同 window_size 的序列数据
         train_data_list = [
             self.create_sequences_combine(self.train_x, self.train_y, self.train_labels, w, self.window_sizes[-1])
             for w in self.window_sizes
@@ -208,42 +176,34 @@ class base_time_series(GCABase):
             for w in self.window_sizes
         ]
 
-        # 分别提取 x、y、y_gan 并堆叠
         self.train_x_all = [x.to(self.device) for x, _, _, _ in train_data_list]
-        self.train_y_all = train_data_list[0][1]  # 所有 y 应该相同，取第一个即可，不用cuda因为要eval
+        self.train_y_all = train_data_list[0][1]
         self.train_y_gan_all = [y_gan.to(self.device) for _, _, y_gan, _ in train_data_list]
         self.train_label_gan_all = [label_gan.to(self.device) for _, _, _, label_gan in train_data_list]
 
         self.test_x_all = [x.to(self.device) for x, _, _, _ in test_data_list]
-        self.test_y_all = test_data_list[0][1]  # 所有 y 应该相同，取第一个即可，不用cuda因为要eval
+        self.test_y_all = test_data_list[0][1]
         self.test_y_gan_all = [y_gan.to(self.device) for _, _, y_gan, _ in test_data_list]
         self.test_label_gan_all = [label_gan.to(self.device) for _, _, _, label_gan in test_data_list]
 
         assert all(torch.equal(train_data_list[0][1], y) for _, y, _, _ in train_data_list), "Train y mismatch!"
         assert all(torch.equal(test_data_list[0][1], y) for _, y, _, _ in test_data_list), "Test y mismatch!"
 
-        """
-        train_x_all.shape  # (N, N, W, F)  不同 window_size 会导致 W 不一样，只能在 W 相同时用 stack
-        train_y_all.shape  # (N,)
-        train_y_gan_all.shape  # (3, N, W+1)
-        """
-
         self.dataloaders = []
 
         for i, (x, y_gan, label_gan) in enumerate(
                 zip(self.train_x_all, self.train_y_gan_all, self.train_label_gan_all)):
-            shuffle_flag = ("transformer" in self.generator_names[i])  # 最后一个设置为 shuffle=True，其余为 False
+            shuffle_flag = ("transformer" in self.generator_names[i])
             dataloader = DataLoader(
                 TensorDataset(x, y_gan, label_gan),
                 batch_size=self.batch_size,
                 shuffle=shuffle_flag,
                 generator=torch.manual_seed(self.seed),
-                drop_last=True  # 丢弃最后一个不足 batch size 的数据
+                drop_last=True
             )
             self.dataloaders.append(dataloader)
 
     def init_model(self,num_cls):
-        """模型结构初始化"""
         assert len(self.generator_names) == self.N, "Generators and Discriminators mismatch!"
         assert isinstance(self.generator_names, list)
         for i in range(self.N):
@@ -253,11 +213,9 @@ class base_time_series(GCABase):
         self.discriminators = []
 
         for i, name in enumerate(self.generator_names):
-            # 获取对应的 x, y
             x = self.train_x_all[i]
             y = self.train_y_all[i]
 
-            # 初始化生成器
             GenClass = self.generator_dict[name]
             if "transformer" in name:
                 gen_model = GenClass(x.shape[-1], output_len=y.shape[-1]).to(self.device)
@@ -266,24 +224,20 @@ class base_time_series(GCABase):
 
             self.generators.append(gen_model)
 
-            # 初始化判别器（默认只用 Discriminator3）
             DisClass = self.discriminator_dict[
                 "default" if self.discriminators_names is None else self.discriminators_names[i]]
             dis_model = DisClass(self.window_sizes[i], out_size=y.shape[-1], num_cls=3).to(self.device)
             self.discriminators.append(dis_model)
 
     def init_hyperparameters(self, ):
-        """初始化训练所需的超参数"""
-        # 初始化：对角线上为1，其余为0，最后一列为1.0
         self.init_GDweight = []
         for i in range(self.N):
             row = [0.0] * self.N
             row[i] = 1.0
-            row.append(1.0)  # 最后一列为 scale
+            row.append(1.0)
             self.init_GDweight.append(row)
 
         if self.gan_weights is None:
-            # 最终：均分组合，最后一列为1.0
             final_row = [round(1.0 / self.N, 3)] * self.N + [1.0]
             self.final_GDweight = [final_row[:] for _ in range(self.N)]
         else:
@@ -306,9 +260,6 @@ class base_time_series(GCABase):
                                                     logger=logger)
 
     def save_models(self, best_model_state):
-        """
-        保存所有 generator 和 discriminator 的模型参数，包含时间戳、模型名称或编号。
-        """
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         ckpt_dir = os.path.join(self.ckpt_dir, timestamp)
         gen_dir = os.path.join(ckpt_dir, "generators")
@@ -316,7 +267,6 @@ class base_time_series(GCABase):
         os.makedirs(gen_dir, exist_ok=True)
         os.makedirs(disc_dir, exist_ok=True)
 
-        # 加载模型并设为 eval
         for i in range(self.N):
             self.generators[i].load_state_dict(best_model_state[i])
             self.generators[i].eval()
@@ -369,13 +319,10 @@ class base_time_series(GCABase):
         return results
 
     def distill(self):
-        """评估模型性能并可视化结果"""
         pass
 
     def visualize_and_evaluate(self):
-        """评估模型性能并可视化结果"""
         pass
 
     def init_history(self):
-        """初始化训练过程中的指标记录结构"""
         pass

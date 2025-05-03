@@ -1,24 +1,24 @@
-# logger_utils.py  ─────────────────────────────────────────────
+# logger_utils.py
 import logging, json, os, datetime
 
 def setup_experiment_logging(output_dir: str, args: dict,
                              log_name_prefix: str = "train") -> logging.Logger:
     """
-    初始化实验日志。
+    Initialize experiment logging.
 
     Parameters
     ----------
     output_dir : str
-        训练脚本里传入的 output_dir，同 trainer 的可视化文件夹一致。
+        The output_dir passed in the training script, consistent with the trainer's visualization folder.
     args : dict
-        所有需要记录的超参数 / CLI 解析结果，例如 vars(args)。
+        All hyperparameters / CLI parsing results that need to be logged, e.g., vars(args).
     log_name_prefix : str, optional
-        生成文件名前缀，默认 "train"。
+        Prefix for the generated filename, default is "train".
 
     Returns
     -------
     logging.Logger
-        已经配置好的 logger，直接 logger.info(...) 使用。
+        The configured logger, use directly with logger.info(...).
     """
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     log_dir = os.path.join(output_dir, "logs")
@@ -30,7 +30,7 @@ def setup_experiment_logging(output_dir: str, args: dict,
         format="%(asctime)s  %(levelname)s  %(message)s",
         handlers=[
             logging.FileHandler(log_path, encoding="utf-8"),
-            logging.StreamHandler()          # 保留控制台输出
+            logging.StreamHandler()          # Keep console output
         ]
     )
 

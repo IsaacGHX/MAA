@@ -7,66 +7,66 @@ import matplotlib.pyplot as plt
 import logging
 
 def validate(model, val_x, val_y):
-    model.eval()  # 将模型设置为评估模式
-    with torch.no_grad():  # 禁止计算梯度
+    model.eval()  # Set the model to evaluation mode
+    with torch.no_grad():  # Disable gradient calculation
         val_x = val_x.clone().detach().float()
 
-        # 检查val_y的类型，如果是numpy.ndarray则转换为torch.Tensor
+        # Check the type of val_y, convert to torch.Tensor if it's numpy.ndarray
         if isinstance(val_y, np.ndarray):
             val_y = torch.tensor(val_y).float()
         else:
             val_y = val_y.clone().detach().float()
 
-        # 使用模型进行预测
+        # Use the model to make predictions
         predictions, logits  = model(val_x)
         predictions = predictions.cpu().numpy()
         val_y = val_y.cpu().numpy()
 
-        # 计算均方误差（MSE）作为验证损失
+        # Calculate Mean Squared Error (MSE) as validation loss
         mse_loss = F.mse_loss(torch.tensor(predictions).float().squeeze(), torch.tensor(val_y).float().squeeze())
 
         return mse_loss
 
 def validate_with_label(model, val_x, val_y, val_labels):
-    model.eval()  # 将模型设置为评估模式
-    with torch.no_grad():  # 禁止计算梯度
+    model.eval()  # Set the model to evaluation mode
+    with torch.no_grad():  # Disable gradient calculation
         val_x = val_x.clone().detach().float()
 
-        # 检查val_y的类型，如果是numpy.ndarray则转换为torch.Tensor
+        # Check the type of val_y, convert to torch.Tensor if it's numpy.ndarray
         if isinstance(val_y, np.ndarray):
             val_y = torch.tensor(val_y).float()
         else:
             val_y = val_y.clone().detach().float()
 
-        # labels 用于分类
+        # labels for classification
         if isinstance(val_labels, np.ndarray):
             val_lbl_t = torch.tensor(val_labels).long().to(val_x.device)
         else:
             val_lbl_t = val_labels.clone().detach().long().to(val_x.device)
 
-        # 使用模型进行预测
+        # Use the model to make predictions
         predictions, logits  = model(val_x)
         predictions = predictions.cpu().numpy()
         val_y = val_y.cpu().numpy()
 
-        # 计算均方误差（MSE）作为验证损失
+        # Calculate Mean Squared Error (MSE) as validation loss
         mse_loss = F.mse_loss(torch.tensor(predictions).float().squeeze(), torch.tensor(val_y).float().squeeze())
 
         true_cls = val_lbl_t[:, -1].squeeze()  # [B]
         pred_cls = logits.argmax(dim=1)  # [B]
-        acc = (pred_cls == true_cls).float().mean()  # 标量
+        acc = (pred_cls == true_cls).float().mean()  # scalar
 
         return mse_loss, acc
 
 
 def plot_generator_losses(data_G, output_dir):
     """
-    绘制 G1、G2、G3 的损失曲线。
+    Plot the loss curves for G1, G2, G3.
 
     Args:
-        data_G1 (list): G1 的损失数据列表，包含 [histD1_G1, histD2_G1, histD3_G1, histG1]。
-        data_G2 (list): G2 的损失数据列表，包含 [histD1_G2, histD2_G2, histD3_G2, histG2]。
-        data_G3 (list): G3 的损失数据列表，包含 [histD1_G3, histD2_G3, histD3_G3, histG3]。
+        data_G1 (list): List of loss data for G1, including [histD1_G1, histD2_G1, histD3_G1, histG1].
+        data_G2 (list): List of loss data for G2, including [histD1_G2, histD2_G2, histD3_G2, histG2].
+        data_G3 (list): List of loss data for G3, including [histD1_G3, histD2_G3, histD3_G3, histG3].
     """
 
     plt.rcParams.update({'font.size': 12})
@@ -133,12 +133,12 @@ def visualize_overall_loss(histG, histD, output_dir):
 def plot_mse_loss(hist_MSE_G, hist_val_loss, num_epochs,
                   output_dir):
     """
-    绘制训练过程中和验证集上的MSE损失变化曲线
+    Plot the MSE loss change curves during training and on the validation set
 
-    参数：
-    hist_MSE_G1, hist_MSE_G2, hist_MSE_G3 : 训练过程中各生成器的MSE损失
-    hist_val_loss1, hist_val_loss2, hist_val_loss3 : 验证集上各生成器的MSE损失
-    num_epochs : 训练的epoch数
+    Parameters:
+    hist_MSE_G1, hist_MSE_G2, hist_MSE_G3 : MSE loss for each generator during training
+    hist_val_loss1, hist_val_loss2, hist_val_loss3 : MSE loss for each generator on the validation set
+    num_epochs : Number of training epochs
     """
     plt.rcParams.update({'font.size': 12})
     N = len(hist_MSE_G)
@@ -158,22 +158,23 @@ def plot_mse_loss(hist_MSE_G, hist_val_loss, num_epochs,
     plt.close()
 
 def inverse_transform(predictions, scaler):
-    """ 使用y_scaler逆转换预测结果 """
+    """ Inverse transform prediction results using y_scaler """
     return scaler.inverse_transform(predictions)
 
 
 def compute_metrics(true_values, predicted_values):
-    """计算MSE, MAE, RMSE, MAPE"""
+    """Compute MSE, MAE, RMSE, MAPE"""
     mse = mean_squared_error(true_values, predicted_values)
     mae = mean_absolute_error(true_values, predicted_values)
     rmse = np.sqrt(mse)
-    mape = np.mean(np.abs((true_values - predicted_values) / true_values)) * 100
-    per_target_mse = np.mean((true_values - predicted_values) ** 2, axis=0)  # 新增
+    # Avoid division by zero for MAPE
+    mape = np.mean(np.abs((true_values - predicted_values) / (true_values + 1e-8))) * 100
+    per_target_mse = np.mean((true_values - predicted_values) ** 2, axis=0)  # New
     return mse, mae, rmse, mape, per_target_mse
 
 
 def plot_fitting_curve(true_values, predicted_values, output_dir, model_name):
-    """绘制拟合曲线并保存结果"""
+    """Plot fitting curve and save results"""
     plt.rcParams.update({'font.size': 12})
     plt.figure(figsize=(10, 6))
     plt.plot(true_values, label='True Values', linewidth=2)
@@ -189,7 +190,7 @@ def plot_fitting_curve(true_values, predicted_values, output_dir, model_name):
 
 
 def save_metrics(metrics, output_dir, model_name):
-    """保存MSE, MAE, RMSE, MAPE到文件"""
+    """Save MSE, MAE, RMSE, MAPE to file"""
     with open(f'{output_dir}/{model_name}_metrics.txt', 'w') as f:
         f.write("MSE: {}\n".format(metrics[0]))
         f.write("MAE: {}\n".format(metrics[1]))
@@ -200,7 +201,7 @@ def save_metrics(metrics, output_dir, model_name):
 def evaluate_best_models(generators, best_model_state, train_xes, train_y, test_xes, test_y, y_scaler, output_dir):
     N = len(generators)
 
-    # 加载模型并设为 eval
+    # Load models and set to eval mode
     for i in range(N):
         generators[i].load_state_dict(best_model_state[i])
         generators[i].eval()
@@ -225,6 +226,7 @@ def evaluate_best_models(generators, best_model_state, train_xes, train_y, test_
             print(f"Train Metrics for G{i+1}: MSE={train_metrics[0]:.4f}, MAE={train_metrics[1]:.4f}, RMSE={train_metrics[2]:.4f}, MAPE={train_metrics[3]:.4f}")
             logging.info(f"Train Metrics for G{i+1}: MSE={train_metrics[0]:.4f}, MAE={train_metrics[1]:.4f}, RMSE={train_metrics[2]:.4f}, MAPE={train_metrics[3]:.4f}")
 
+
         for i in range(N):
             test_pred, test_cls = generators[i](test_xes[i])
             test_pred = test_pred.cpu().numpy()
@@ -236,7 +238,8 @@ def evaluate_best_models(generators, best_model_state, train_xes, train_y, test_
             print(f"Test Metrics for G{i+1}: MSE={test_metrics[0]:.4f}, MAE={test_metrics[1]:.4f}, RMSE={test_metrics[2]:.4f}, MAPE={test_metrics[3]:.4f}")
             logging.info(f"Test Metrics for G{i+1}: MSE={test_metrics[0]:.4f}, MAE={test_metrics[1]:.4f}, RMSE={test_metrics[2]:.4f}, MAPE={test_metrics[3]:.4f}")
 
-    # 构造返回结果
+
+    # Construct results dictionary
     result = {
         "train_mse":  [m[0] for m in train_metrics_list],
         "train_mae":  [m[1] for m in train_metrics_list],
@@ -252,4 +255,3 @@ def evaluate_best_models(generators, best_model_state, train_xes, train_y, test_
     }
 
     return result
-

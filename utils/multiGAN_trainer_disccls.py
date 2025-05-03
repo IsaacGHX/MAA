@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import copy
 
@@ -44,14 +43,14 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
     g_learning_rate = 2e-5
     d_learning_rate = 2e-5
 
-    # 二元交叉熵【损失函数，可能会有问题
+    # Binary cross-entropy loss function, might have issues
     # criterion = nn.BCELoss()
     criterion = nn.BCEWithLogitsLoss()
 
     optimizers_G = [torch.optim.AdamW(model.parameters(), lr=g_learning_rate, betas=(0.9, 0.999))
                     for model in generators]
 
-    # 为每个优化器设置 ReduceLROnPlateau 调度器
+    # Set ReduceLROnPlateau scheduler for each optimizer
     schedulers = [lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=16, min_lr=1e-7)
                   for optimizer in optimizers_G]
 
@@ -60,13 +59,13 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
 
     best_epoch = [-1 for _ in range(N)]  #
 
-    # 定义生成历史记录的关键字
+    # Define keys for generating history records
     """
-    以三个为例，keys长得是这样得的：
-    ['G1', 'G2', 'G3', 
-    'D1', 'D2', 'D3', 
-    'MSE_G1', 'MSE_G2', 'MSE_G3', 
-    'val_G1', 'val_G2', 'val_G3', 
+    Taking three as an example, the keys look like this:
+    ['G1', 'G2', 'G3',
+    'D1', 'D2', 'D3',
+    'MSE_G1', 'MSE_G2', 'MSE_G3',
+    'val_G1', 'val_G2', 'val_G3',
     'D1_G1', 'D2_G1', 'D3_G1', 'D1_G2', 'D2_G2', 'D3_G2', 'D1_G3', 'D2_G3', 'D3_G3'
     ]
     """
@@ -90,7 +89,7 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
             d_g_keys.append(d_key + "_" + g_key)
     keys.extend(d_g_keys)
 
-    # 创建包含每个值为np.zeros(num_epochs)的字典
+    # Create a dictionary containing np.zeros(num_epochs) for each key
     hists_dict = {key: np.zeros(num_epochs) for key in keys}
 
     best_mse = [float('inf') for _ in range(N)]
@@ -109,23 +108,23 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
         if epoch < 10:
             weight_matrix = torch.tensor(init_GDweight).to(device)
         elif dynamic_weight:
-            # —— 动态计算 G-D weight 矩阵 ——
-            # 从上一轮的 validation loss 里拿到每个 G 的损失
+            # —— Dynamically calculate G-D weight matrix ——
+            # Get the loss for each G from the previous round's validation loss
             # val_loss_keys = ['val_G1', 'val_G2', ..., 'val_GN']
             losses = torch.stack([
                       torch.tensor(hists_dict[val_loss_keys[i]][epoch - 1])
              for i in range(N)
             ]).to(device)  # shape: [N]
 
-            # 性能 Perf_i = -loss_i，beta 控制“硬度”
+            # Performance Perf_i = -loss_i, beta controls "hardness"
             perf = torch.exp(-losses)  # shape: [N]
             probs = perf / perf.sum()  # shape: [N], softmax over generators
 
-            # 构造训练 Generator 时用的 N×N 矩阵：每行都是同一分布
+            # Construct N×N matrix used for training Generator: each row is the same distribution
             weight_G = probs.unsqueeze(0).repeat(N, 1)  # shape: [N, N]
             weight_G = weight_G + torch.eye(N, device=device)
 
-            # 构造训练 Discriminator 时的 N×(N+1) 矩阵：最后一列保持 1.0（给真数据）
+            # Construct N×(N+1) matrix for training Discriminator: the last column remains 1.0 (for real data)
             ones = torch.ones((N, 1), device=device)
             weight_matrix = torch.cat([weight_G, ones], dim=1)  # shape: [N, N+1]
         else:
@@ -172,7 +171,7 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
                                                 criterion, weight_matrix,
                                                 device, mode="train_D")
 
-            # 3. 存入 loss_dict
+            # 3. Store into loss_dict
             for i in range(N):
                 loss_dict[d_keys[i]].append(loss_D[i].item())
 
@@ -181,7 +180,7 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
                     key = f'D{i}_G{j}'
                     loss_dict[key].append(lossD_G[i - 1, j - 1].item())
 
-            # 根据批次的奇偶性交叉训练两个GAN
+            # based on batch index parity cross-train the two GANs (Comment removed as code doesn't match)
             # if batch_idx% 2 == 0:
             for optimizer_D in optimizers_D:
                 optimizer_D.zero_grad()
@@ -205,7 +204,7 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
                 discriminators[i].eval()
                 generators[i].train()
 
-            '''训练生成器'''
+            '''Train Generator'''
             weight = weight_matrix[:, :-1].clone().detach()  # [N, N]
 
             loss_G, loss_mse_G = discriminate_fake(args, X, Y, LABELS,
@@ -309,7 +308,7 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
                     discriminators[D_rank[0]].eval()
                     generators[G_rank[0]].train()
 
-                    '''训练生成器'''
+                    '''Train Generator'''
                     weight = weight_matrix[:, :-1].clone().detach()  # [N, N]
                     loss_G, loss_mse_G = discriminate_fake(args, [X[G_rank[0]]], [Y[D_rank[0]]], [LABELS[D_rank[0]]],
                                                            [generators[G_rank[0]]], [discriminators[D_rank[0]]],
@@ -327,20 +326,20 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
 
                 validate_G_loss, validate_G_acc = validate_with_label(generators[G_rank[0]], val_xes[G_rank[0]], val_y, val_labels[G_rank[0]])
 
-                    # g0 = G_rank[0]  # 最优 Generator 索引
-                    # # —— 1. 训练所有 D_i ——
+                    # g0 = G_rank[0]  # Best Generator index
+                    # # —— 1. Train all D_i ——
                     # for d0 in D_rank:
                     #     generators[g0].eval()
                     #     discriminators[d0].train()
                     #
-                    #     # 只用 G_best 的那路输入 X[g0]，对应 D_i 的标签 LABELS[d0]
+                    #     # Only use the input from G_best X[g0], corresponding label LABELS[d0] for D_i
                     #     loss_D, _ = discriminate_fake(
                     #         args,
                     #         [X[g0]], [Y[d0]], [LABELS[d0]],
                     #         [generators[g0]], [discriminators[d0]],
                     #         [window_sizes[d0]], target_num,
                     #         criterion,
-                    #         weight_matrix[d0, g0],  # 原来给 (D_i, G_best) 的权重
+                    #         weight_matrix[d0, g0],  # Original weight for (D_i, G_best)
                     #         device,
                     #         mode="train_D"
                     #     )
@@ -349,10 +348,10 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
                     #     scaler.step(optimizers_D[d0])
                     #     scaler.update()
                     #
-                    # # —— 2. 找到对 G_best 损失最小的 D ——
+                    # # —— 2. Find the D with the minimum loss for G_best ——
                     # gen_losses = []
                     # for d0 in D_rank:
-                    #     # 注意此处 mode="train_G"，返回 loss_G, loss_mse_G
+                    #     # Note: mode="train_G" here, returns loss_G, loss_mse_G
                     #     loss_G, _ = discriminate_fake(
                     #         args,
                     #         [X[g0]], [Y[d0]], [LABELS[d0]],
@@ -365,10 +364,10 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
                     #     )
                     #     gen_losses.append(loss_G.item())
                     #
-                    # # 最小损失对应的 D 索引
+                    # # Index of D corresponding to minimum loss
                     # d_min = D_rank[int(np.argmin(gen_losses))]
                     #
-                    # # —— 3. 用 D_min 训练生成器 ——
+                    # # —— 3. Train the generator with D_min ——
                     # discriminators[d_min].eval()
                     # generators[g0].train()
                     #
@@ -387,7 +386,7 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
                     # scaler.step(optimizers_G[g0])
                     # scaler.update()
                     #
-                    # # 最后再做一次验证
+                    # # Finally, perform another validation
                     # validate_G_loss, validate_G_acc = validate_with_label(
                     #     generators[g0],
                     #     val_xes[g0], val_y, val_labels[g0]
@@ -411,9 +410,9 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
                 logging.info(
                     f"== Cross finetune Epoch [{e + 1}/{num_epochs}]: G{G_rank[0] + 1} with D{D_rank[0] + 1}: Validation MSE {validate_G_loss:.8f}, Validation Acc {validate_G_acc*100:.2f}%")  # NEW
 
-        # 每个epoch结束时，打印训练过程中的损失
+        # At the end of each epoch, print training losses
         print(f"Epoch [{epoch + 1}/{num_epochs}]")
-        # 动态生成打印字符串
+        # Dynamically generate print string
         log_str_mse = ", ".join(
             f"G{i + 1}: {hists_dict[key][epoch]:.8f}"
             for i, key in enumerate(val_loss_keys)
@@ -465,10 +464,10 @@ def train_multi_gan(args, generators, discriminators, dataloaders,
 
     plot_mse_loss(hist_MSE_G, hist_val_loss, epoch, output_dir)
 
-    # 在输出之前，先拼接字符串
+    # Before outputting, first concatenate strings
     best_info = ", ".join([f"G{i + 1}:{best_epoch[i]}" for i in range(N)])
 
-    # 一次性打印到一行
+    # Print to one line at once
     print(f"Best epochs | {best_info}")
     logging.info(f"Best epochs | {best_info}")
 
@@ -490,37 +489,37 @@ def discriminate_fake(args, X, Y, LABELS,
 
     # discriminator output for real data
     with get_autocast_context(args.amp_dtype):
-        # 自动混合精度上下文
+        # Automatic Mixed Precision context
         dis_real_outputs = [model(y, label) for (model, y, label) in zip(discriminators, Y, LABELS)]
         outputs = [generator(x) for (generator, x) in zip(generators, X)]  # cannot be omitted
         real_labels = [torch.ones_like(dis_real_output).to(device) for dis_real_output in dis_real_outputs]
         fake_data_G, fake_logits_G = zip(*outputs)
-        # 假设 fake_logits_G 是一个 list，每个元素是 [batch_size, num_classes] 的 tensor
+        # Assuming fake_logits_G is a list, each element is a [batch_size, num_classes] tensor
         fake_cls_G = [torch.argmax(logit, dim=1) for logit in fake_logits_G]  # shape: [batch_size]
 
         lossD_real = [criterion(dis_real_output, real_label) for (dis_real_output, real_label) in
                       zip(dis_real_outputs, real_labels)]
 
     if mode == "train_D":
-        # G1生成的数据
+        # Data generated by G1
         fake_data_temp_G = [fake_data.detach() for fake_data in fake_data_G]
-        # 拼接之后可以让生成的假数据，既包含假数据又包含真数据，
+        # After concatenation, the generated fake data can include both fake and real data.
         fake_data_temp_G = [torch.cat([label[:, :window_size, :], fake_data.reshape(-1, 1, target_num)], axis=1)
                             for (label, window_size, fake_data) in zip(Y, window_sizes, fake_data_temp_G)]
-        # G1生成的cls logits
+        # CLS logits generated by G1
         fake_cls_temp_G = [fake_logits.detach() for fake_logits in fake_cls_G]
-        # 拼接之后可以让生成的假数据，既包含假数据又包含真数据，
+        # After concatenation, the generated fake data can include both fake and real data.
         fake_cls_temp_G = [torch.cat([label[:, :window_size, :], fake_cls.reshape(-1, 1, target_num)], axis=1)
                            for (label, window_size, fake_cls) in zip(Y, window_sizes, fake_cls_temp_G)]
     elif mode == "train_G":
-        # 拼接之后可以让生成的假数据，既包含假数据又包含真数据，
+        # After concatenation, the generated fake data can include both fake and real data.
         fake_data_temp_G = [torch.cat([y[:, :window_size, :], fake_data.reshape(-1, 1, target_num)], axis=1)
                             for (y, window_size, fake_data) in zip(Y, window_sizes, fake_data_G)]
         fake_cls_temp_G = [torch.cat([label[:, :window_size, :], fake_cls.reshape(-1, 1, target_num)], axis=1)
                            for (label, window_size, fake_cls) in zip(LABELS, window_sizes, fake_cls_G)]
 
-    # 判别器对伪造数据损失
-    # 三个生成器的结果的数据对齐
+    # Discriminator loss on fake data
+    # Data alignment of results from generators
     fake_data_GtoD = {}
     fake_cls_GtoD = {}
     for i in range(N):
@@ -540,7 +539,7 @@ def discriminate_fake(args, X, Y, LABELS,
     fake_labels = [torch.zeros_like(real_label).to(device) for real_label in real_labels]
 
     with get_autocast_context(args.amp_dtype):
-        # 自动混合精度上下文
+        # Automatic Mixed Precision context
         dis_fake_outputD = []
         for i in range(N):
             row = []
@@ -553,7 +552,7 @@ def discriminate_fake(args, X, Y, LABELS,
             dis_fake_outputD.append(row)  # dis_fake_outputD[i][j] = Di(Gj)
 
         if mode == "train_D":
-            loss_matrix = torch.zeros(N, N + 1, device=device)  # device 取决于你的模型位置
+            loss_matrix = torch.zeros(N, N + 1, device=device)  # device depends on your model's location
             weight = weight_matrix.clone().detach()  # [N, N+1]
             for i in range(N):
                 for j in range(N + 1):
@@ -562,7 +561,7 @@ def discriminate_fake(args, X, Y, LABELS,
                     elif j == N:
                         loss_matrix[i, j] = dis_fake_outputD[i][j]
         elif mode == "train_G":
-            loss_matrix = torch.zeros(N, N, device=device)  # device 取决于你的模型位置
+            loss_matrix = torch.zeros(N, N, device=device)  # device depends on your model's location
             weight = weight_matrix.clone().detach()  # [N, N]
             for i in range(N):
                 for j in range(N):
@@ -575,14 +574,14 @@ def discriminate_fake(args, X, Y, LABELS,
                           zip(fake_data_G, Y)]
             loss_matrix = loss_mse_G
             loss_DorG = loss_DorG + torch.stack(loss_matrix).to(device)
-            # ---------------- 添加分类损失 -----------------
-            # 针对每个生成器的分类分支计算交叉熵损失
-            # LABELS 作为真实标签传入（假设其 shape 与 fake_data_cls[i] 第一维度匹配）
+            # ---------------- Add Classification Loss -----------------
+            # Calculate cross-entropy loss for the classification branch of each generator
+            # LABELS passed as true labels (assuming its shape matches the first dimension of fake_data_cls[i])
             cls_losses = [F.cross_entropy(fake_cls, l[:, -1, :].squeeze()) for (fake_cls, l) in
                           zip(fake_logits_G, LABELS)]
-            # 可以取平均或者加总（此处取平均）
+            # Can take average or sum (average is taken here)
             classification_loss = torch.stack(cls_losses)
-            # 合并生成器的 loss：原始 loss 与分类 loss 相加
+            # Combine generator loss: original loss plus classification loss
             loss_DorG = loss_DorG + classification_loss
             # --------------------------------------------------
 
@@ -591,9 +590,9 @@ def discriminate_fake(args, X, Y, LABELS,
 
 def do_distill(rank, generators, dataloaders, optimizers, window_sizes, device,
                *,
-               alpha: float = 0.3,  # 软目标权重
-               temperature: float = 2.0,  # 温度系数
-               grad_clip: float = 1.0,  # 梯度裁剪上限 (L2‑norm)
+               alpha: float = 0.3,  # Soft target weight
+               temperature: float = 2.0,  # Temperature coefficient
+               grad_clip: float = 1.0,  # Gradient clipping limit (L2-norm)
                mse_lambda: float = 0.8,
                ):
     teacher_generator = generators[rank[0]]  # Teacher generator is ranked first
@@ -634,16 +633,16 @@ def do_distill(rank, generators, dataloaders, optimizers, window_sizes, device,
         # hard_loss = F.mse_loss(student_output * temperature, y) * (1 - alpha)
         # distillation_loss = soft_loss + hard_loss
 
-        # 使用温度缩放后计算 softmax 分布
+        # Calculate softmax distribution after applying temperature scaling
         teacher_soft = F.softmax(teacher_cls.detach() / temperature, dim=1)
         student_log_soft = F.log_softmax(student_cls / temperature, dim=1)
 
-        # 软标签学习损失：KL 散度
+        # Soft label learning loss: KL divergence
         soft_loss = F.kl_div(student_log_soft, teacher_soft, reduction="batchmean") * (alpha * temperature ** 2)
 
         label_onehot = F.one_hot(label.long(), num_classes=student_cls.size(1)).float()
 
-        # 硬目标损失：学生分类输出和真实标签计算交叉熵
+        # Hard target loss: calculate cross-entropy between student classification output and true labels
         hard_loss = nn.BCEWithLogitsLoss()(student_cls, label_onehot) * (1 - alpha)
         hard_loss += F.mse_loss(student_output * temperature, y) * (1 - alpha) * mse_lambda
         distillation_loss = soft_loss + hard_loss
@@ -659,5 +658,3 @@ def do_distill(rank, generators, dataloaders, optimizers, window_sizes, device,
         # student_optimizer.step()  # Assuming same optimizer for all generators, modify as needed
         scaler.step(student_optimizer)
         scaler.update()
-
-
